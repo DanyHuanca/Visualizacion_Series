@@ -1,6 +1,6 @@
 import streamlit as st
 
-st.title("Graficas de series de tiempo")
+st.title("Graficas de series de tiempoxxx")
 
 entrada = st.text_input("Ingrese la serie, separada por comas,", value="10,20,30,40,50")
 entrada2 = entrada.split(",")
