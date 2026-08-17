@@ -1,3 +1,4 @@
+
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -11,26 +12,29 @@ entrada = st.text_input(
 
 entrada2 = entrada.split(",")
 
-# Convertimos los datos a números
-serie = [float(i.strip()) for i in entrada2 if i.strip() != ""]
+# Convertir datos ingresados a números
+serie = [
+    float(i.strip())
+    for i in entrada2
+    if i.strip() != ""
+]
 
-# -----------------------------
+# -----------------------------------
 # PERIODOS HISTÓRICOS
-# -----------------------------
+# -----------------------------------
 
 x = np.arange(1, len(serie) + 1)
 y = np.array(serie)
 
-# -----------------------------
-# TENDENCIA LINEAL
-# y = mx + b
-# -----------------------------
+# -----------------------------------
+# CALCULAR TENDENCIA LINEAL
+# -----------------------------------
 
 pendiente, intercepto = np.polyfit(x, y, 1)
 
-# -----------------------------
-# PROYECCIÓN DE 6 PERIODOS
-# -----------------------------
+# -----------------------------------
+# HORIZONTE FUTURO
+# -----------------------------------
 
 horizonte = 6
 
@@ -39,50 +43,63 @@ periodos_totales = np.arange(
     len(serie) + horizonte + 1
 )
 
-tendencia = (
-    pendiente * periodos_totales
-    + intercepto
-)
+# -----------------------------------
+# SERIE HISTÓRICA
+# -----------------------------------
 
-# -----------------------------
-# DATAFRAME PARA EL GRÁFICO
-# -----------------------------
+serie_historica = serie + [np.nan] * horizonte
+
+# -----------------------------------
+# TENDENCIA SOLO PARA EL FUTURO
+# -----------------------------------
+
+tendencia_futura = [np.nan] * len(serie)
+
+for periodo in range(
+    len(serie) + 1,
+    len(serie) + horizonte + 1
+):
+    valor_tendencia = pendiente * periodo + intercepto
+    tendencia_futura.append(valor_tendencia)
+
+# -----------------------------------
+# DATAFRAME
+# -----------------------------------
 
 df = pd.DataFrame({
     "Periodo": periodos_totales,
-    "Serie real": serie + [np.nan] * horizonte,
-    "Tendencia": tendencia
+    "Serie real": serie_historica,
+    "Pronóstico": tendencia_futura
 })
 
 df = df.set_index("Periodo")
 
-# -----------------------------
+# -----------------------------------
 # GRÁFICO
-# -----------------------------
+# -----------------------------------
 
-st.subheader("Serie histórica + tendencia")
+st.subheader("Serie histórica + pronóstico")
 
 st.line_chart(df)
 
-# -----------------------------
-# INFORMACIÓN DE LA TENDENCIA
-# -----------------------------
+# -----------------------------------
+# ECUACIÓN DE TENDENCIA
+# -----------------------------------
 
 st.write(
-    f"📊 Ecuación de tendencia: "
+    f"📊 Tendencia calculada: "
     f"y = {pendiente:.2f}x + {intercepto:.2f}"
 )
 
-# -----------------------------
-# PRONÓSTICO
-# -----------------------------
+# -----------------------------------
+# TABLA DE PRONÓSTICO
+# -----------------------------------
 
-st.subheader("🔮 Proyección próximos 6 periodos")
+st.subheader("🔮 Pronóstico de los próximos 6 periodos")
 
-pronostico = df.tail(horizonte)[["Tendencia"]]
+pronostico = df.tail(horizonte)[["Pronóstico"]]
 
-pronostico = pronostico.rename(
-    columns={"Tendencia": "Pronóstico"}
+st.dataframe(
+    pronostico,
+    use_container_width=True
 )
-
-st.dataframe(pronostico)
