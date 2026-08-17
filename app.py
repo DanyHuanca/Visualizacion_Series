@@ -1,18 +1,21 @@
-
 import streamlit as st
 import pandas as pd
 import numpy as np
+import plotly.graph_objects as go
 
 st.title("📈 Gráficas de series de tiempo")
 
 entrada = st.text_input(
     "Ingrese la serie, separada por comas:",
-    value="10,20,30,40,50"
+    value="10,12,33,36,50,65,75,85"
 )
+
+# -----------------------------------
+# CONVERTIR DATOS
+# -----------------------------------
 
 entrada2 = entrada.split(",")
 
-# Convertir datos ingresados a números
 serie = [
     float(i.strip())
     for i in entrada2
@@ -27,63 +30,122 @@ x = np.arange(1, len(serie) + 1)
 y = np.array(serie)
 
 # -----------------------------------
-# CALCULAR TENDENCIA LINEAL
+# TENDENCIA LINEAL
 # -----------------------------------
 
 pendiente, intercepto = np.polyfit(x, y, 1)
 
 # -----------------------------------
-# HORIZONTE FUTURO
+# HORIZONTE
 # -----------------------------------
 
 horizonte = 6
 
-periodos_totales = np.arange(
-    1,
+# Periodos futuros
+periodos_futuros = np.arange(
+    len(serie) + 1,
     len(serie) + horizonte + 1
 )
 
+# Pronóstico futuro
+valores_futuros = (
+    pendiente * periodos_futuros
+    + intercepto
+)
+
 # -----------------------------------
+# PRONÓSTICO EMPALMADO
+# -----------------------------------
+
+# Incluimos el último periodo real para
+# que la línea punteada empiece desde allí
+
+x_pronostico = np.concatenate([
+    [len(serie)],
+    periodos_futuros
+])
+
+y_pronostico = np.concatenate([
+    [serie[-1]],
+    valores_futuros
+])
+
+# -----------------------------------
+# CREAR GRÁFICO
+# -----------------------------------
+
+fig = go.Figure()
+
 # SERIE HISTÓRICA
-# -----------------------------------
+fig.add_trace(
+    go.Scatter(
+        x=x,
+        y=y,
+        mode="lines+markers",
+        name="Serie real",
+        line=dict(
+            width=3
+        ),
+        marker=dict(
+            size=7
+        )
+    )
+)
 
-serie_historica = serie + [np.nan] * horizonte
-
-# -----------------------------------
-# TENDENCIA SOLO PARA EL FUTURO
-# -----------------------------------
-
-tendencia_futura = [np.nan] * len(serie)
-
-for periodo in range(
-    len(serie) + 1,
-    len(serie) + horizonte + 1
-):
-    valor_tendencia = pendiente * periodo + intercepto
-    tendencia_futura.append(valor_tendencia)
-
-# -----------------------------------
-# DATAFRAME
-# -----------------------------------
-
-df = pd.DataFrame({
-    "Periodo": periodos_totales,
-    "Serie real": serie_historica,
-    "Pronóstico": tendencia_futura
-})
-
-df = df.set_index("Periodo")
-
-# -----------------------------------
-# GRÁFICO
-# -----------------------------------
-
-st.subheader("Serie histórica + pronóstico")
-
-st.line_chart(df)
+# PRONÓSTICO PUNTEADO
+fig.add_trace(
+    go.Scatter(
+        x=x_pronostico,
+        y=y_pronostico,
+        mode="lines+markers",
+        name="Pronóstico",
+        line=dict(
+            dash="dot",
+            width=3
+        ),
+        marker=dict(
+            size=7
+        )
+    )
+)
 
 # -----------------------------------
-# ECUACIÓN DE TENDENCIA
+# DISEÑO
+# -----------------------------------
+
+fig.update_layout(
+    title="Serie histórica + pronóstico",
+    xaxis_title="Periodo",
+    yaxis_title="Valor",
+
+    hovermode="x unified",
+
+    legend=dict(
+        orientation="h",
+        yanchor="bottom",
+        y=1.02,
+        xanchor="right",
+        x=1
+    ),
+
+    height=500
+)
+
+fig.update_xaxes(
+    dtick=1
+)
+
+# -----------------------------------
+# MOSTRAR GRÁFICO
+# -----------------------------------
+
+st.plotly_chart(
+    fig,
+    use_container_width=True
+)
+
+# -----------------------------------
+# ECUACIÓN
 # -----------------------------------
 
 st.write(
@@ -92,14 +154,18 @@ st.write(
 )
 
 # -----------------------------------
-# TABLA DE PRONÓSTICO
+# TABLA PRONÓSTICO
 # -----------------------------------
 
-st.subheader("🔮 Pronóstico de los próximos 6 periodos")
+st.subheader("🔮 Pronóstico próximos 6 periodos")
 
-pronostico = df.tail(horizonte)[["Pronóstico"]]
+df_pronostico = pd.DataFrame({
+    "Periodo": periodos_futuros,
+    "Pronóstico": valores_futuros
+})
 
 st.dataframe(
-    pronostico,
-    use_container_width=True
+    df_pronostico,
+    use_container_width=True,
+    hide_index=True
 )
